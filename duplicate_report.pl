@@ -69,7 +69,10 @@ how dated it looks. In my defence PBP reports no criticisms.
 ######################################################################
 ## Pragmas
 
-use Modern::Perl;
+# Modern::Perl isn't on many systems by default.
+#use Modern::Perl;
+use strict;
+use warnings;
 
 # Program version
 our $VERSION = '1.01';
