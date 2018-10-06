@@ -22,13 +22,15 @@ so order the directories on the command line with preferred directories first.
 
 =over 4
 
-=item B<--dir> directory to scan. Multiple dirs permitted.
+=item B<--dir>              directory to scan. Multiple dirs permitted.
 
-=item B<--debug>    debug level
+=item B<--duplicate-delete> delete duplicates if set
 
-=item B<--help>     display brief help message
+=item B<--debug>            debug level
 
-=item B<--version>  display program version
+=item B<--help>             display brief help message
+
+=item B<--version>          display program version
 
 =back
 
@@ -49,13 +51,15 @@ Each file match is reported to STDOUT as follows:
 
 ./duplicate_report.pl --dir dir1 --dir dir2
 
+./duplicate_report.pl --dir dir1 --dir dir2 --duplicate-delete=1
+
 =head1 FILES
 
 Only reads files in the dirs you specify as options.
 
 =head1 AUTHOR
 
-Written by Mike Bruins 20/6/2012, 13/3/2015.
+Written by Mike Bruins 20/6/2012, 13/3/2015, 6/10/2018.
 
 Years from now we will look back at this code style and think
 how dated it looks. In my defence PBP reports no criticisms.
@@ -68,7 +72,7 @@ how dated it looks. In my defence PBP reports no criticisms.
 use Modern::Perl;
 
 # Program version
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 ######################################################################
 ## Required Libraries
@@ -92,6 +96,7 @@ use FileHandle;
 ## Global
 
 my $global_debug = 0;
+my $global_duplicate_delete = 0;
 my $global_md5_digest = Digest::MD5->new;
 my %global_seen_file;
 my $global_file_count = 0;
@@ -145,8 +150,17 @@ sub wanted {
     if ($global_seen_file{$digest}){
         print "Match:\n";
         print "ORIG: ".$global_seen_file{$digest}."\n";
-        print "DUPE: $file\n";
-#        unlink($file) || die "Failed to delete '$file'";
+        if ($global_duplicate_delete){
+          if (unlink($file)){
+            print "DUPE: Deleted $file\n";
+          }
+          else{
+            warn "WARN: Failed to delete '$file' because $!";
+          }
+        }
+        else{
+          print "DUPE: $file\n";
+        }
     }
     else{
         $global_seen_file{$digest} = $file;
@@ -158,7 +172,11 @@ sub wanted {
 MAIN: {
 
     my (@dir);
-    GetOptions( 'debug=i' => \$global_debug, 'dir=s@' => \@dir ) or pod2usage(1);
+    GetOptions( 
+       'debug=i'            => \$global_debug,
+       'duplicate-delete=i' => \$global_duplicate_delete,
+       'dir=s@'             => \@dir
+    ) or pod2usage(1);
 
     if (! @dir){
             pod2usage( -verbose => 1, -message => "Error: no folders supplied\n", );
